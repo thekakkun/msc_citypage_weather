@@ -7,7 +7,7 @@ use std::{
 use url::Url;
 use xsd_parser::quick_xml::{DeserializeSync, IoReader, XmlReader};
 
-use msc_citypage::{consumer::CityPageStream, schemas::SiteData};
+use msc_citypage::{CityPageStream, SiteData};
 
 /// An example of subscribing to the MSC citypage AMQP stream.
 #[tokio::main(flavor = "current_thread")]
