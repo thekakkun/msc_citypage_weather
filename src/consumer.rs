@@ -48,7 +48,7 @@ impl CityPageStream {
         let hn = hostname::get()?;
         let queue = channel
             .queue_declare(
-                format!("q_anonymous.kiiin.citypage.{}", hn.to_str().ok_or("")?).as_str(),
+                format!("q_anonymous.rust_msc_citypage.{}", hn.to_str().ok_or("")?).as_str(),
                 QueueDeclareOptions {
                     exclusive: true,
                     durable: false,
