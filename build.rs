@@ -41,7 +41,7 @@ fn main() -> Result<(), Error> {
     config.optimizer.flags = OptimizerFlags::all()
         - OptimizerFlags::REMOVE_EMPTY_ENUM_VARIANTS
         - OptimizerFlags::REMOVE_DUPLICATES;
-    config.generator.flags = GeneratorFlags::all();
+    config.generator.flags = GeneratorFlags::all() - GeneratorFlags::MIXED_TYPE_SUPPORT;
 
     let config = config.with_render_steps([
         RenderStep::Types,
@@ -78,9 +78,6 @@ fn replace_variant_names(mut types: MetaTypes) -> MetaTypes {
                 match variant.ident.name.as_str() {
                     "%" => {
                         variant.display_name = Some("Percent".to_string());
-                    }
-                    "" => {
-                        variant.display_name = Some("None".to_string());
                     }
                     "Aujourd&apos;hui" => {
                         variant.display_name = Some("AujourdHui".to_string());
