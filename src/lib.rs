@@ -1,5 +1,5 @@
 pub mod consumer;
-pub mod schemas;
+pub mod models;
 
 pub use consumer::CityPageStream;
-pub use schemas::SiteData;
+// pub use schemas::SiteData;

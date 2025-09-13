@@ -7,10 +7,12 @@ documentation = "https://docs.rs/msc_citypage/"
 readme = "README.md"
 repository = "https://github.com/thekakkun/msc_citypage"
 license-file = "LICENSE"
+build = "build/main.rs"
 
 [dependencies]
 async-stream = "0.3.6"
 chrono = "0.4.41"
+chrono-tz = "0.10.4"
 futures-core = "0.3.31"
 futures-util = "0.3.31"
 hostname = "0.4.1"
