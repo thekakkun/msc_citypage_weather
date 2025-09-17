@@ -1,8 +1,12 @@
-use std::{default, fmt::Debug};
+use std::{default, error::Error, fmt::Debug};
 
-use chrono::{DateTime, TimeZone};
+use chrono::{DateTime, ParseError, TimeZone};
 use chrono_tz::Tz;
-use xsd_parser::quick_xml::{Deserializer, WithDeserializer};
+use quick_xml::events::{BytesStart, Event};
+use xsd_parser::quick_xml::{
+    DeserializeSync, Deserializer, DeserializerArtifact, DeserializerEvent, DeserializerOutput,
+    DeserializerResult, WithDeserializer, XmlReader,
+};
 
 // include!(concat!(env!("OUT_DIR"), "/general.rs"));
 
@@ -19,8 +23,28 @@ where
     type Deserializer = DateStampTypeDeserializer;
 }
 
+impl<Tz: TimeZone> TryFrom<DateStampTypeDeserializer> for DateStampType<Tz> {
+    type Error = ParseError;
+
+    fn try_from(value: DateStampTypeDeserializer) -> Result<Self, Self::Error> {
+        let year = value.year.ok_or(ParseError)?;
+        let month = value.month.ok_or(ParseError)?;
+        let day = value.day.ok_or(ParseError)?;
+        let hour = value.hour.ok_or(ParseError)?;
+        let min = value.minute.ok_or(ParseError)?;
+        let timezone = value.timezone.ok_or(ParseError)?;
+
+        let datetime = timezone
+            .with_ymd_and_hms(year, month, day, hour, min, 0)
+            .single()
+            .ok_or(ParseError)?;
+
+        Ok(DateStampType { datetime })
+    }
+}
+
 #[derive(Debug, Default)]
-pub struct DateStampTypeDeserializer {
+struct DateStampTypeDeserializer {
     year: Option<i32>,
     month: Option<u32>,
     day: Option<u32>,
@@ -38,38 +62,88 @@ enum DateStampTypeDeserializerState {
     Unknown__,
 }
 
+impl DateStampTypeDeserializer {
+    fn handle_datetime(&mut self, e: &BytesStart) -> Result<(), Box<dyn Error>> {
+        for attr_result in e.attributes() {
+            let a = attr_result?;
+            if a.key.as_ref() == b"zone" {
+                let tz_name = a.decode_and_unescape_value(e.decoder())?;
+                let timezone = match tz_name.as_ref() {
+                    "ADT" | "AST" | "HAA" | "HNA" => Some(Tz::Canada__Atlantic),
+                    "CDT" | "CST" | "HAC" | "HNC" => Some(Tz::Canada__Central),
+                    "EDT" | "EST" | "HAE" | "HNE" => Some(Tz::Canada__Eastern),
+                    "MDT" | "MST" | "HAR" | "HNR" => Some(Tz::Canada__Mountain),
+                    "NDT" | "NST" | "HAT" | "HNT" => Some(Tz::Canada__Newfoundland),
+                    "PDT" | "PST" | "HAP" | "HNP" => Some(Tz::Canada__Pacific),
+                    _ => None,
+                };
+
+                self.timezone = timezone;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl<'de> Deserializer<'de, DateStampType<Tz>> for DateStampTypeDeserializer
 where
     Tz: TimeZone,
 {
-    fn init<R>(
-        reader: &R,
-        event: quick_xml::events::Event<'de>,
-    ) -> xsd_parser::quick_xml::DeserializerResult<'de, DateStampType<Tz>>
+    fn init<R>(reader: &R, event: Event<'de>) -> DeserializerResult<'de, DateStampType<Tz>>
     where
-        R: xsd_parser::quick_xml::XmlReader,
+        R: XmlReader,
     {
         Self::default().next(reader, event)
     }
 
     fn next<R>(
-        self,
+        mut self,
         reader: &R,
-        event: quick_xml::events::Event<'de>,
-    ) -> xsd_parser::quick_xml::DeserializerResult<'de, DateStampType<Tz>>
+        event: Event<'de>,
+    ) -> DeserializerResult<'de, DateStampType<Tz>>
     where
-        R: xsd_parser::quick_xml::XmlReader,
+        R: XmlReader,
     {
-        todo!()
+        let _reader = reader;
+
+        match event {
+            Event::Start(ref e) => {
+                match e.name().as_ref() {
+                    b"dateTime" => self.handle_datetime(&e),
+                    _ => Ok(()),
+                };
+                return Ok(DeserializerOutput {
+                    event: DeserializerEvent::Continue(event),
+                    artifact: DeserializerArtifact::Deserializer(self),
+                    allow_any: false,
+                });
+            }
+            Event::End(bytes_end) => todo!(),
+            Event::Empty(bytes_start) => todo!(),
+            Event::Text(bytes_text) => todo!(),
+            Event::CData(bytes_cdata) => todo!(),
+            Event::Comment(bytes_text) => todo!(),
+            Event::Decl(bytes_decl) => todo!(),
+            Event::PI(bytes_pi) => todo!(),
+            Event::DocType(bytes_text) => todo!(),
+            Event::GeneralRef(bytes_ref) => todo!(),
+            Event::Eof => {
+                return Ok(DeserializerOutput {
+                    event: DeserializerEvent::Break(event),
+                    artifact: DeserializerArtifact::Deserializer(self),
+                    allow_any: false,
+                });
+            }
+        }
     }
 
     fn finish<R>(self, reader: &R) -> Result<DateStampType<Tz>, xsd_parser::quick_xml::Error>
     where
-        R: xsd_parser::quick_xml::XmlReader,
+        R: XmlReader,
     {
         todo!()
     }
-    // add code here
 }
 
 // impl DeserializeBytesFromStr for DateStampType<Tz: TimeZone> {}
